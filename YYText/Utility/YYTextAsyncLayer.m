@@ -200,9 +200,13 @@ static dispatch_queue_t YYTextAsyncLayerGetReleaseQueue() {
     } else {
         [_sentinel increase];
         if (task.willDisplay) task.willDisplay(self);
-        UIGraphicsBeginImageContextWithOptions(self.bounds.size, self.opaque, self.contentsScale);
-        CGContextRef context = UIGraphicsGetCurrentContext();
-        if (self.opaque && context) {
+       UIGraphicsImageRendererFormat *format = [[UIGraphicsImageRendererFormat alloc] init];
+     format.opaque = self.opaque;
+      format.scale = self.contentsScale;
+    UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:self.bounds.size format:format];
+    UIImage *image = [renderer imageWithActions:^(UIGraphicsImageRendererContext * _Nonnull rendererContext) {
+        CGContextRef context = rendererContext.CGContext;
+        if (self.opaque) {
             CGSize size = self.bounds.size;
             size.width *= self.contentsScale;
             size.height *= self.contentsScale;
@@ -220,9 +224,8 @@ static dispatch_queue_t YYTextAsyncLayerGetReleaseQueue() {
             } CGContextRestoreGState(context);
         }
         task.display(context, self.bounds.size, ^{return NO;});
-        UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
-        UIGraphicsEndImageContext();
-        self.contents = (__bridge id)(image.CGImage);
+    }];
+    self.contents = (__bridge id)(image.CGImage);
         if (task.didDisplay) task.didDisplay(self, YES);
     }
 }
